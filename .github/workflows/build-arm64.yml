@@ -1,4 +1,4 @@
-name: Build Final Kylin ARM64
+name: Build Stable Kylin ARM64
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-final:
+  build-stable:
     runs-on: ubuntu-latest
     
     steps:
@@ -23,42 +23,65 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       
-    - name: Create Dockerfile
+    - name: Create stable Dockerfile
       run: |
-        echo 'FROM --platform=linux/arm64 ubuntu:20.04' > Dockerfile.final
-        echo 'ENV DEBIAN_FRONTEND=noninteractive' >> Dockerfile.final
-        echo 'ENV PYTHONUNBUFFERED=1' >> Dockerfile.final
-        echo 'WORKDIR /app' >> Dockerfile.final
-        echo 'RUN apt-get update && apt-get install -y python3.8 python3-pip python3-pyqt5 python3-pyqt5.qtchart libqt5core5a libqt5gui5 libqt5widgets5 libqt5charts5 libx11-6 libxext6 libxrender1 fonts-dejavu-core build-essential && rm -rf /var/lib/apt/lists/*' >> Dockerfile.final
-        echo 'COPY . .' >> Dockerfile.final
-        echo 'RUN pip3 install PyQt5==5.15.10 PyQt5-sip==12.13.0 PyQtChart==5.15.6 openpyxl==3.1.2 Pillow==10.2.0 reportlab==4.0.9 python-dateutil==2.8.2 pandas==2.0.3 pyinstaller==6.3.0' >> Dockerfile.final
-        echo 'RUN pyinstaller --onefile --windowed --name youth_records_kylin --add-data "database:database" --add-data "services:services" --add-data "ui:ui" --add-data "utils:utils" --add-data "youth_records.db:." --hidden-import PyQt5.QtCore --hidden-import PyQt5.QtGui --hidden-import PyQt5.QtWidgets --hidden-import PyQt5.QtChart --hidden-import openpyxl --hidden-import pandas --hidden-import reportlab --hidden-import PIL main.py' >> Dockerfile.final
+        echo 'FROM ubuntu:20.04' > Dockerfile.stable
+        echo 'ENV DEBIAN_FRONTEND=noninteractive' >> Dockerfile.stable
+        echo 'ENV PYTHONUNBUFFERED=1' >> Dockerfile.stable
+        echo 'WORKDIR /app' >> Dockerfile.stable
+        echo 'RUN apt-get update && apt-get install -y python3.8 python3.8-dev python3-pip python3-setuptools python3-wheel python3-pyqt5 python3-pyqt5.qtchart libqt5core5a libqt5gui5 libqt5widgets5 libqt5charts5 libx11-6 libxext6 libxrender1 fonts-dejavu-core build-essential gcc g++ make pkg-config libffi-dev libssl-dev zlib1g-dev libjpeg-dev libpng-dev libfreetype6-dev && rm -rf /var/lib/apt/lists/*' >> Dockerfile.stable
+        echo 'COPY . .' >> Dockerfile.stable
+        echo 'RUN python3.8 -m pip install --upgrade pip setuptools wheel' >> Dockerfile.stable
+        echo 'RUN python3.8 -m pip install --no-cache-dir PyQt5==5.15.10' >> Dockerfile.stable
+        echo 'RUN python3.8 -m pip install --no-cache-dir PyQt5-sip==12.13.0' >> Dockerfile.stable
+        echo 'RUN python3.8 -m pip install --no-cache-dir PyQtChart==5.15.6' >> Dockerfile.stable
+        echo 'RUN python3.8 -m pip install --no-cache-dir openpyxl==3.1.2' >> Dockerfile.stable
+        echo 'RUN python3.8 -m pip install --no-cache-dir Pillow==10.2.0' >> Dockerfile.stable
+        echo 'RUN python3.8 -m pip install --no-cache-dir reportlab==4.0.9' >> Dockerfile.stable
+        echo 'RUN python3.8 -m pip install --no-cache-dir python-dateutil==2.8.2' >> Dockerfile.stable
+        echo 'RUN python3.8 -m pip install --no-cache-dir pandas==2.0.3' >> Dockerfile.stable
+        echo 'RUN python3.8 -m pip install --no-cache-dir pyinstaller==6.3.0' >> Dockerfile.stable
+        echo 'RUN python3.8 -m PyInstaller --onefile --windowed --name youth_records_kylin --add-data "database:database" --add-data "services:services" --add-data "ui:ui" --add-data "utils:utils" --add-data "youth_records.db:." main.py' >> Dockerfile.stable
+        echo 'RUN ls -la dist/ && file dist/youth_records_kylin' >> Dockerfile.stable
         
-    - name: Build Docker image
+    - name: Build stable image
       run: |
-        docker buildx build --platform linux/arm64 --output type=local,dest=./output -f Dockerfile.final .
+        docker buildx build --platform linux/arm64 --output type=local,dest=./stable_output -f Dockerfile.stable .
         
-    - name: Create package
+    - name: Create stable package
       run: |
-        mkdir -p final_package
-        cp output/dist/youth_records_kylin final_package/
-        chmod +x final_package/youth_records_kylin
-        cp youth_records.db final_package/
-        echo '#!/bin/bash' > final_package/start.sh
-        echo 'export DISPLAY=:0' >> final_package/start.sh
-        echo 'export QT_QPA_PLATFORM=xcb' >> final_package/start.sh
-        echo 'cd "$(dirname "$0")"' >> final_package/start.sh
-        echo './youth_records_kylin' >> final_package/start.sh
-        chmod +x final_package/start.sh
-        echo '银河麒麟V10使用说明' > final_package/README.txt
-        echo '1. chmod +x youth_records_kylin' >> final_package/README.txt
-        echo '2. ./start.sh' >> final_package/README.txt
-        ls -la final_package/
-        file final_package/youth_records_kylin
+        mkdir -p stable_package
+        if [ -f "stable_output/dist/youth_records_kylin" ]; then
+          cp stable_output/dist/youth_records_kylin stable_package/
+          chmod +x stable_package/youth_records_kylin
+        else
+          echo "可执行文件未找到，查看输出目录："
+          find stable_output/ -name "*youth*" -type f
+          exit 1
+        fi
+        cp youth_records.db stable_package/ || echo "数据库文件未找到"
+        cp -r 示例数据 stable_package/ || echo "示例数据未找到"
+        echo '#!/bin/bash' > stable_package/run.sh
+        echo 'export DISPLAY=:0' >> stable_package/run.sh
+        echo 'export QT_QPA_PLATFORM=xcb' >> stable_package/run.sh
+        echo 'cd "$(dirname "$0")"' >> stable_package/run.sh
+        echo './youth_records_kylin' >> stable_package/run.sh
+        chmod +x stable_package/run.sh
+        echo '银河麒麟V10 ARM64版本' > stable_package/使用说明.txt
+        echo '1. 设置权限: chmod +x youth_records_kylin' >> stable_package/使用说明.txt
+        echo '2. 运行程序: ./run.sh 或 ./youth_records_kylin' >> stable_package/使用说明.txt
+        echo '3. 如需依赖: sudo apt install python3-pyqt5 python3-pyqt5.qtchart' >> stable_package/使用说明.txt
+        echo '' >> stable_package/使用说明.txt
+        echo '文件列表:' >> stable_package/使用说明.txt
+        ls -la stable_package/ >> stable_package/使用说明.txt
+        echo '' >> stable_package/使用说明.txt
+        echo '文件信息:' >> stable_package/使用说明.txt
+        file stable_package/youth_records_kylin >> stable_package/使用说明.txt
+        du -h stable_package/youth_records_kylin >> stable_package/使用说明.txt
         
-    - name: Upload artifact
+    - name: Upload stable package
       uses: actions/upload-artifact@v4
       with:
-        name: youth-records-kylin-final
-        path: final_package/
+        name: youth-records-kylin-stable
+        path: stable_package/
         retention-days: 30
