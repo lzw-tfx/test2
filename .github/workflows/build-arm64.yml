@@ -1,4 +1,4 @@
-name: Build Simple Kylin V10 ARM64
+name: Build Final Kylin ARM64
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-kylin-simple:
+  build-final:
     runs-on: ubuntu-latest
     
     steps:
@@ -23,135 +23,42 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       
-    - name: Build Kylin V10 executable
+    - name: Create Dockerfile
       run: |
-        cat > Dockerfile.kylin << 'EOF'
-        FROM --platform=linux/arm64 ubuntu:20.04
+        echo 'FROM --platform=linux/arm64 ubuntu:20.04' > Dockerfile.final
+        echo 'ENV DEBIAN_FRONTEND=noninteractive' >> Dockerfile.final
+        echo 'ENV PYTHONUNBUFFERED=1' >> Dockerfile.final
+        echo 'WORKDIR /app' >> Dockerfile.final
+        echo 'RUN apt-get update && apt-get install -y python3.8 python3-pip python3-pyqt5 python3-pyqt5.qtchart libqt5core5a libqt5gui5 libqt5widgets5 libqt5charts5 libx11-6 libxext6 libxrender1 fonts-dejavu-core build-essential && rm -rf /var/lib/apt/lists/*' >> Dockerfile.final
+        echo 'COPY . .' >> Dockerfile.final
+        echo 'RUN pip3 install PyQt5==5.15.10 PyQt5-sip==12.13.0 PyQtChart==5.15.6 openpyxl==3.1.2 Pillow==10.2.0 reportlab==4.0.9 python-dateutil==2.8.2 pandas==2.0.3 pyinstaller==6.3.0' >> Dockerfile.final
+        echo 'RUN pyinstaller --onefile --windowed --name youth_records_kylin --add-data "database:database" --add-data "services:services" --add-data "ui:ui" --add-data "utils:utils" --add-data "youth_records.db:." --hidden-import PyQt5.QtCore --hidden-import PyQt5.QtGui --hidden-import PyQt5.QtWidgets --hidden-import PyQt5.QtChart --hidden-import openpyxl --hidden-import pandas --hidden-import reportlab --hidden-import PIL main.py' >> Dockerfile.final
         
-        ENV DEBIAN_FRONTEND=noninteractive
-        ENV PYTHONUNBUFFERED=1
-        
-        WORKDIR /app
-        
-        # 安装基础环境
-        RUN apt-get update && apt-get install -y \
-            python3.8 \
-            python3-pip \
-            python3-pyqt5 \
-            python3-pyqt5.qtchart \
-            libqt5core5a \
-            libqt5gui5 \
-            libqt5widgets5 \
-            libqt5charts5 \
-            libx11-6 \
-            libxext6 \
-            libxrender1 \
-            fonts-dejavu-core \
-            build-essential \
-            && rm -rf /var/lib/apt/lists/*
-        
-        # 复制项目文件
-        COPY . .
-        
-        # 安装Python依赖
-        RUN pip3 install \
-            PyQt5==5.15.10 \
-            PyQt5-sip==12.13.0 \
-            PyQtChart==5.15.6 \
-            openpyxl==3.1.2 \
-            Pillow==10.2.0 \
-            reportlab==4.0.9 \
-            python-dateutil==2.8.2 \
-            pandas==2.0.3 \
-            pyinstaller==6.3.0
-        
-        # 简单打包
-        RUN pyinstaller \
-            --onefile \
-            --windowed \
-            --name youth_records_kylin_v10 \
-            --add-data "database:database" \
-            --add-data "services:services" \
-            --add-data "ui:ui" \
-            --add-data "utils:utils" \
-            --add-data "youth_records.db:." \
-            --add-data "示例数据:示例数据" \
-            --hidden-import PyQt5.QtCore \
-            --hidden-import PyQt5.QtGui \
-            --hidden-import PyQt5.QtWidgets \
-            --hidden-import PyQt5.QtChart \
-            --hidden-import openpyxl \
-            --hidden-import pandas \
-            --hidden-import reportlab \
-            --hidden-import PIL \
-            main.py
-        
-        # 验证文件
-        RUN ls -la dist/ && file dist/youth_records_kylin_v10
-        
-        EOF
-        
-        # 构建并提取
-        docker buildx build \
-          --platform linux/arm64 \
-          --output type=local,dest=./kylin_simple \
-          -f Dockerfile.kylin .
-        
-    - name: Create deployment package
+    - name: Build Docker image
       run: |
-        mkdir -p kylin_deployment
+        docker buildx build --platform linux/arm64 --output type=local,dest=./output -f Dockerfile.final .
         
-        # 复制可执行文件
-        cp kylin_simple/dist/youth_records_kylin_v10 kylin_deployment/
-        chmod +x kylin_deployment/youth_records_kylin_v10
+    - name: Create package
+      run: |
+        mkdir -p final_package
+        cp output/dist/youth_records_kylin final_package/
+        chmod +x final_package/youth_records_kylin
+        cp youth_records.db final_package/
+        echo '#!/bin/bash' > final_package/start.sh
+        echo 'export DISPLAY=:0' >> final_package/start.sh
+        echo 'export QT_QPA_PLATFORM=xcb' >> final_package/start.sh
+        echo 'cd "$(dirname "$0")"' >> final_package/start.sh
+        echo './youth_records_kylin' >> final_package/start.sh
+        chmod +x final_package/start.sh
+        echo '银河麒麟V10使用说明' > final_package/README.txt
+        echo '1. chmod +x youth_records_kylin' >> final_package/README.txt
+        echo '2. ./start.sh' >> final_package/README.txt
+        ls -la final_package/
+        file final_package/youth_records_kylin
         
-        # 复制数据文件
-        cp youth_records.db kylin_deployment/
-        cp -r 示例数据 kylin_deployment/
-        
-        # 创建启动脚本
-        cat > kylin_deployment/start.sh << 'SCRIPT'
-#!/bin/bash
-export DISPLAY=:0
-export QT_QPA_PLATFORM=xcb
-cd "$(dirname "$0")"
-./youth_records_kylin_v10
-SCRIPT
-        
-        chmod +x kylin_deployment/start.sh
-        
-        # 创建安装说明
-        cat > kylin_deployment/安装说明.txt << 'README'
-银河麒麟V10使用说明
-
-1. 设置执行权限:
-   chmod +x youth_records_kylin_v10
-   chmod +x start.sh
-
-2. 运行程序:
-   ./start.sh
-   或
-   ./youth_records_kylin_v10
-
-3. 如果缺少依赖，请安装:
-   sudo apt install python3-pyqt5 python3-pyqt5.qtchart
-
-文件说明:
-- youth_records_kylin_v10: 主程序
-- start.sh: 启动脚本
-- youth_records.db: 数据库
-- 示例数据/: 示例文件
-README
-        
-        # 显示结果
-        echo "=== 打包完成 ==="
-        ls -la kylin_deployment/
-        du -h kylin_deployment/youth_records_kylin_v10
-        file kylin_deployment/youth_records_kylin_v10
-        
-    - name: Upload package
+    - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: youth-records-kylin-v10-simple
-        path: kylin_deployment/
+        name: youth-records-kylin-final
+        path: final_package/
         retention-days: 30
