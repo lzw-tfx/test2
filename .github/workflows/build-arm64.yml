@@ -1,4 +1,4 @@
-name: Build Perfect Executable for Kylin V10 ARM64
+name: Build Simple Kylin V10 ARM64
 
 on:
   push:
@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-kylin-perfect:
+  build-kylin-simple:
     runs-on: ubuntu-latest
     
     steps:
@@ -23,121 +23,38 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
       
-    - name: Build perfect Kylin V10 executable
+    - name: Build Kylin V10 executable
       run: |
         cat > Dockerfile.kylin << 'EOF'
-        # 使用最接近银河麒麟V10的Ubuntu 20.04 ARM64
         FROM --platform=linux/arm64 ubuntu:20.04
         
-        # 设置环境变量
         ENV DEBIAN_FRONTEND=noninteractive
         ENV PYTHONUNBUFFERED=1
-        ENV QT_QPA_PLATFORM=xcb
-        ENV DISPLAY=:0
         
         WORKDIR /app
         
-        # 添加中文支持和银河麒麟兼容的软件源
+        # 安装基础环境
         RUN apt-get update && apt-get install -y \
-            locales \
-            ca-certificates \
-            && locale-gen zh_CN.UTF-8 \
-            && update-locale LANG=zh_CN.UTF-8
-        
-        ENV LANG=zh_CN.UTF-8
-        ENV LANGUAGE=zh_CN:zh
-        ENV LC_ALL=zh_CN.UTF-8
-        
-        # 安装完整的Python和PyQt5环境 - 针对银河麒麟V10优化
-        RUN apt-get install -y \
-            # Python完整环境
             python3.8 \
-            python3.8-dev \
-            python3.8-venv \
             python3-pip \
-            # PyQt5完整套件 - 银河麒麟V10兼容版本
             python3-pyqt5 \
-            python3-pyqt5.qtwidgets \
-            python3-pyqt5.qtgui \
-            python3-pyqt5.qtcore \
             python3-pyqt5.qtchart \
-            python3-pyqt5.qtprintsupport \
-            python3-pyqt5.qtsvg \
-            pyqt5-dev-tools \
-            # Qt5运行时库 - 完整版本
-            qtbase5-dev \
-            qtchooser \
-            qt5-qmake \
-            qtbase5-dev-tools \
             libqt5core5a \
             libqt5gui5 \
             libqt5widgets5 \
             libqt5charts5 \
-            libqt5printsupport5 \
-            libqt5svg5 \
-            libqt5network5 \
-            libqt5sql5 \
-            libqt5xml5 \
-            # UKUI桌面环境兼容库
-            libgtk-3-0 \
-            libgdk-pixbuf2.0-0 \
-            libpango-1.0-0 \
-            libcairo2 \
-            libatk1.0-0 \
-            # X11和图形库 - 银河麒麟V10完整支持
-            xorg \
             libx11-6 \
-            libx11-xcb1 \
-            libxcb1 \
             libxext6 \
             libxrender1 \
-            libxtst6 \
-            libxi6 \
-            libxrandr2 \
-            libxss1 \
-            libxcomposite1 \
-            libxdamage1 \
-            libxfixes3 \
-            libxcursor1 \
-            libxinerama1 \
-            libxkbcommon0 \
-            libxkbcommon-x11-0 \
-            # 字体支持 - 中文字体完整支持
-            fonts-liberation \
             fonts-dejavu-core \
-            fonts-noto-cjk \
-            fonts-wqy-zenhei \
-            fonts-wqy-microhei \
-            fontconfig \
-            # 图像和媒体库
-            libjpeg8 \
-            libpng16-16 \
-            libtiff5 \
-            libfreetype6 \
-            libfontconfig1 \
-            # 系统运行时库
-            libglib2.0-0 \
-            libdbus-1-3 \
-            libssl1.1 \
-            libffi7 \
-            zlib1g \
-            libc6 \
-            libstdc++6 \
-            libgcc-s1 \
-            # 编译工具
             build-essential \
-            gcc \
-            g++ \
-            make \
-            pkg-config \
             && rm -rf /var/lib/apt/lists/*
         
         # 复制项目文件
         COPY . .
         
-        # 安装Python依赖 - 使用系统Python3.8
-        RUN python3.8 -m pip install --upgrade pip setuptools wheel && \
-            python3.8 -m pip install \
+        # 安装Python依赖
+        RUN pip3 install \
             PyQt5==5.15.10 \
             PyQt5-sip==12.13.0 \
             PyQtChart==5.15.6 \
@@ -148,241 +65,93 @@ jobs:
             pandas==2.0.3 \
             pyinstaller==6.3.0
         
-        # 创建专门的PyInstaller配置 - 银河麒麟V10优化
-        RUN cat > kylin_v10.spec << 'SPEC'
-# -*- mode: python ; coding: utf-8 -*-
-# 银河麒麟V10 ARM64专用打包配置
-
-block_cipher = None
-
-a = Analysis(
-    ['main.py'],
-    pathex=['/app'],
-    binaries=[
-        # Qt5核心库
-        ('/usr/lib/aarch64-linux-gnu/libQt5Core.so.5', '.'),
-        ('/usr/lib/aarch64-linux-gnu/libQt5Gui.so.5', '.'),
-        ('/usr/lib/aarch64-linux-gnu/libQt5Widgets.so.5', '.'),
-        ('/usr/lib/aarch64-linux-gnu/libQt5Charts.so.5', '.'),
-        # X11库
-        ('/usr/lib/aarch64-linux-gnu/libX11.so.6', '.'),
-        ('/usr/lib/aarch64-linux-gnu/libXext.so.6', '.'),
-        ('/usr/lib/aarch64-linux-gnu/libXrender.so.1', '.'),
-        # 字体库
-        ('/usr/lib/aarch64-linux-gnu/libfontconfig.so.1', '.'),
-        ('/usr/lib/aarch64-linux-gnu/libfreetype.so.6', '.'),
-    ],
-    datas=[
-        ('database', 'database'),
-        ('services', 'services'),
-        ('ui', 'ui'),
-        ('utils', 'utils'),
-        ('youth_records.db', '.'),
-        ('示例数据', '示例数据'),
-        # Qt5插件
-        ('/usr/lib/aarch64-linux-gnu/qt5/plugins/platforms', 'qt5/plugins/platforms'),
-        ('/usr/lib/aarch64-linux-gnu/qt5/plugins/imageformats', 'qt5/plugins/imageformats'),
-        # 字体文件
-        ('/usr/share/fonts/truetype/dejavu', 'fonts/dejavu'),
-        ('/usr/share/fonts/truetype/liberation', 'fonts/liberation'),
-    ],
-    hiddenimports=[
-        'PyQt5.QtCore',
-        'PyQt5.QtGui', 
-        'PyQt5.QtWidgets',
-        'PyQt5.QtChart',
-        'PyQt5.sip',
-        'openpyxl',
-        'pandas',
-        'reportlab',
-        'PIL',
-        'sqlite3',
-    ],
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
-    excludes=[],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
-    noarchive=False,
-)
-
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
-
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    [],
-    name='youth_records_kylin_v10',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=False,
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=False,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch='aarch64',
-    codesign_identity=None,
-    entitlements_file=None,
-)
-SPEC
+        # 简单打包
+        RUN pyinstaller \
+            --onefile \
+            --windowed \
+            --name youth_records_kylin_v10 \
+            --add-data "database:database" \
+            --add-data "services:services" \
+            --add-data "ui:ui" \
+            --add-data "utils:utils" \
+            --add-data "youth_records.db:." \
+            --add-data "示例数据:示例数据" \
+            --hidden-import PyQt5.QtCore \
+            --hidden-import PyQt5.QtGui \
+            --hidden-import PyQt5.QtWidgets \
+            --hidden-import PyQt5.QtChart \
+            --hidden-import openpyxl \
+            --hidden-import pandas \
+            --hidden-import reportlab \
+            --hidden-import PIL \
+            main.py
         
-        # 使用专用配置进行打包
-        RUN python3.8 -m PyInstaller kylin_v10.spec
-        
-        # 验证生成的文件
-        RUN ls -la dist/ && \
-            file dist/youth_records_kylin_v10 && \
-            du -h dist/youth_records_kylin_v10
+        # 验证文件
+        RUN ls -la dist/ && file dist/youth_records_kylin_v10
         
         EOF
         
         # 构建并提取
         docker buildx build \
           --platform linux/arm64 \
-          --output type=local,dest=./kylin_output \
+          --output type=local,dest=./kylin_simple \
           -f Dockerfile.kylin .
         
-        # 检查结果
-        ls -la kylin_output/
-        find kylin_output/ -name "*youth*" -type f
-        
-    - name: Create perfect Kylin V10 package
+    - name: Create deployment package
       run: |
-        mkdir -p kylin_v10_package
+        mkdir -p kylin_deployment
         
         # 复制可执行文件
-        if [ -f "kylin_output/dist/youth_records_kylin_v10" ]; then
-          cp kylin_output/dist/youth_records_kylin_v10 kylin_v10_package/
-          chmod +x kylin_v10_package/youth_records_kylin_v10
-        else
-          echo "可执行文件未找到!"
-          find kylin_output/ -type f -name "*youth*"
-          exit 1
-        fi
+        cp kylin_simple/dist/youth_records_kylin_v10 kylin_deployment/
+        chmod +x kylin_deployment/youth_records_kylin_v10
         
         # 复制数据文件
-        cp youth_records.db kylin_v10_package/ 2>/dev/null || echo "数据库文件未找到"
-        cp -r 示例数据 kylin_v10_package/ 2>/dev/null || echo "示例数据未找到"
+        cp youth_records.db kylin_deployment/
+        cp -r 示例数据 kylin_deployment/
         
-        # 创建桌面快捷方式
-        cat > kylin_v10_package/youth_records.desktop << 'DESKTOP'
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=一人一策记录本
-Name[zh_CN]=一人一策记录本
-Comment=青年管理系统
-Comment[zh_CN]=青年管理系统
-Exec=/opt/youth_records/youth_records_kylin_v10
-Icon=/opt/youth_records/icon.png
-Terminal=false
-Categories=Office;Database;
-StartupNotify=true
-DESKTOP
-        
-        # 创建安装脚本
-        cat > kylin_v10_package/install.sh << 'INSTALL'
+        # 创建启动脚本
+        cat > kylin_deployment/start.sh << 'SCRIPT'
 #!/bin/bash
-# 银河麒麟V10安装脚本
-
-echo "=== 一人一策记录本 - 银河麒麟V10安装程序 ==="
-
-# 检查系统
-if ! grep -q "Kylin" /etc/os-release 2>/dev/null; then
-    echo "警告: 当前系统可能不是银河麒麟V10"
-fi
-
-# 创建安装目录
-sudo mkdir -p /opt/youth_records
-
-# 复制文件
-sudo cp youth_records_kylin_v10 /opt/youth_records/
-sudo cp youth_records.db /opt/youth_records/
-sudo cp -r 示例数据 /opt/youth_records/ 2>/dev/null || true
-
-# 设置权限
-sudo chmod +x /opt/youth_records/youth_records_kylin_v10
-sudo chown -R $USER:$USER /opt/youth_records
-
-# 安装桌面快捷方式
-mkdir -p ~/.local/share/applications
-cp youth_records.desktop ~/.local/share/applications/
-chmod +x ~/.local/share/applications/youth_records.desktop
-
-# 创建启动器
-sudo tee /usr/local/bin/youth_records << 'LAUNCHER'
-#!/bin/bash
-cd /opt/youth_records
 export DISPLAY=:0
 export QT_QPA_PLATFORM=xcb
+cd "$(dirname "$0")"
 ./youth_records_kylin_v10
-LAUNCHER
-
-sudo chmod +x /usr/local/bin/youth_records
-
-echo "安装完成!"
-echo "可以通过以下方式启动程序:"
-echo "1. 在应用菜单中找到'一人一策记录本'"
-echo "2. 在终端中输入: youth_records"
-echo "3. 直接运行: /opt/youth_records/youth_records_kylin_v10"
-INSTALL
+SCRIPT
         
-        chmod +x kylin_v10_package/install.sh
+        chmod +x kylin_deployment/start.sh
         
-        # 创建使用说明
-        cat > kylin_v10_package/README_银河麒麟V10.txt << 'README'
-一人一策记录本 - 银河麒麟V10专版
+        # 创建安装说明
+        cat > kylin_deployment/安装说明.txt << 'README'
+银河麒麟V10使用说明
 
-系统要求:
-- 银河麒麟桌面操作系统V10
-- ARM64架构 (飞腾处理器)
-- UKUI桌面环境
-- 至少1GB内存
+1. 设置执行权限:
+   chmod +x youth_records_kylin_v10
+   chmod +x start.sh
 
-安装方法:
-1. 解压所有文件到任意目录
-2. 运行: sudo ./install.sh
-3. 安装完成后可在应用菜单找到程序
+2. 运行程序:
+   ./start.sh
+   或
+   ./youth_records_kylin_v10
 
-直接运行:
-如果不想安装，可以直接运行:
-chmod +x youth_records_kylin_v10
-./youth_records_kylin_v10
-
-特性:
-✅ 专为银河麒麟V10优化
-✅ 支持UKUI桌面环境
-✅ 完整的中文字体支持
-✅ 包含所有运行时依赖
-✅ 支持双击启动
-✅ 可创建桌面快捷方式
+3. 如果缺少依赖，请安装:
+   sudo apt install python3-pyqt5 python3-pyqt5.qtchart
 
 文件说明:
 - youth_records_kylin_v10: 主程序
-- install.sh: 安装脚本
-- youth_records.desktop: 桌面快捷方式
+- start.sh: 启动脚本
 - youth_records.db: 数据库
 - 示例数据/: 示例文件
 README
         
-        # 显示最终信息
-        echo "=== 银河麒麟V10专版打包完成 ==="
-        ls -la kylin_v10_package/
-        echo "可执行文件大小:"
-        du -h kylin_v10_package/youth_records_kylin_v10
-        echo "文件架构信息:"
-        file kylin_v10_package/youth_records_kylin_v10
+        # 显示结果
+        echo "=== 打包完成 ==="
+        ls -la kylin_deployment/
+        du -h kylin_deployment/youth_records_kylin_v10
+        file kylin_deployment/youth_records_kylin_v10
         
-    - name: Upload Kylin V10 package
+    - name: Upload package
       uses: actions/upload-artifact@v4
       with:
-        name: youth-records-kylin-v10-perfect
-        path: kylin_v10_package/
+        name: youth-records-kylin-v10-simple
+        path: kylin_deployment/
         retention-days: 30
