@@ -43,32 +43,46 @@ jobs:
         # Copy project files
         COPY . .
         
-        # Install Python dependencies
-        RUN pip install pyinstaller openpyxl reportlab python-dateutil pandas==2.0.3 Pillow
-        
-        # Build executable
-        RUN pyinstaller --onefile \
+        # Install Python dependencies and build
+        RUN pip install pyinstaller openpyxl reportlab python-dateutil pandas==2.0.3 Pillow && \
+            pyinstaller --onefile \
             --name youth_records_kylin_arm64 \
             --add-data "database:database" \
             --add-data "services:services" \
             --add-data "ui:ui" \
             --add-data "utils:utils" \
             --add-data "youth_records.db:." \
-            main.py
+            main.py && \
+            cp dist/youth_records_kylin_arm64 /tmp/
         EOF
         
-        # Build ARM64 Docker image and extract executable
-        docker buildx build --platform linux/arm64 --load -t youth-arm64 -f Dockerfile.arm64 .
-        docker run --platform linux/arm64 --name temp-container youth-arm64 ls /app/dist
-        docker cp temp-container:/app/dist/youth_records_kylin_arm64 ./youth_records_kylin_arm64
-        docker rm temp-container
+        # Build and extract in one step
+        docker buildx build --platform linux/arm64 --output type=local,dest=. -f Dockerfile.arm64 .
+        
+        # Check if file exists
+        ls -la
+        find . -name "*youth_records*" -type f
           
     - name: Create deployment package
       run: |
         mkdir -p deployment
-        cp dist/youth_records_kylin_arm64 deployment/
-        cp youth_records.db deployment/
-        cp -r 示例数据 deployment/
+        
+        # Check if executable exists and copy it
+        if [ -f "youth_records_kylin_arm64" ]; then
+          cp youth_records_kylin_arm64 deployment/
+        elif [ -f "tmp/youth_records_kylin_arm64" ]; then
+          cp tmp/youth_records_kylin_arm64 deployment/
+        elif [ -f "dist/youth_records_kylin_arm64" ]; then
+          cp dist/youth_records_kylin_arm64 deployment/
+        else
+          echo "Executable not found! Listing all files:"
+          find . -name "*youth*" -type f
+          exit 1
+        fi
+        
+        # Copy other files
+        cp youth_records.db deployment/ || echo "Database file not found"
+        cp -r 示例数据 deployment/ || echo "Sample data not found"
         
         # 创建启动脚本
         cat > deployment/start.sh << 'EOF'
