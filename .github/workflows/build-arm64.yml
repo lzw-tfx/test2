@@ -153,67 +153,24 @@ jobs:
 # -*- mode: python ; coding: utf-8 -*-
 # 银河麒麟V10 ARM64专用打包配置
 
-import os
-import sys
-
 block_cipher = None
-
-# 收集所有Qt5库文件
-qt5_binaries = []
-qt5_lib_path = '/usr/lib/aarch64-linux-gnu'
-qt5_libs = [
-    'libQt5Core.so.5',
-    'libQt5Gui.so.5', 
-    'libQt5Widgets.so.5',
-    'libQt5Charts.so.5',
-    'libQt5PrintSupport.so.5',
-    'libQt5Svg.so.5',
-    'libQt5Network.so.5',
-    'libQt5Sql.so.5',
-    'libQt5Xml.so.5',
-    'libQt5XcbQpa.so.5',
-    'libQt5DBus.so.5'
-]
-
-for lib in qt5_libs:
-    lib_path = os.path.join(qt5_lib_path, lib)
-    if os.path.exists(lib_path):
-        qt5_binaries.append((lib_path, '.'))
-
-# 收集X11库文件
-x11_binaries = []
-x11_libs = [
-    'libX11.so.6',
-    'libX11-xcb.so.1',
-    'libxcb.so.1',
-    'libXext.so.6',
-    'libXrender.so.1',
-    'libXi.so.6',
-    'libXrandr.so.2',
-    'libXss.so.1',
-    'libXcomposite.so.1',
-    'libXdamage.so.1',
-    'libXfixes.so.3',
-    'libXcursor.so.1',
-    'libXinerama.so.1'
-]
-
-for lib in x11_libs:
-    lib_path = os.path.join(qt5_lib_path, lib)
-    if os.path.exists(lib_path):
-        x11_binaries.append((lib_path, '.'))
 
 a = Analysis(
     ['main.py'],
     pathex=['/app'],
-    binaries=qt5_binaries + x11_binaries + [
-        # 添加其他必要的系统库
+    binaries=[
+        # Qt5核心库
+        ('/usr/lib/aarch64-linux-gnu/libQt5Core.so.5', '.'),
+        ('/usr/lib/aarch64-linux-gnu/libQt5Gui.so.5', '.'),
+        ('/usr/lib/aarch64-linux-gnu/libQt5Widgets.so.5', '.'),
+        ('/usr/lib/aarch64-linux-gnu/libQt5Charts.so.5', '.'),
+        # X11库
+        ('/usr/lib/aarch64-linux-gnu/libX11.so.6', '.'),
+        ('/usr/lib/aarch64-linux-gnu/libXext.so.6', '.'),
+        ('/usr/lib/aarch64-linux-gnu/libXrender.so.1', '.'),
+        # 字体库
         ('/usr/lib/aarch64-linux-gnu/libfontconfig.so.1', '.'),
         ('/usr/lib/aarch64-linux-gnu/libfreetype.so.6', '.'),
-        ('/usr/lib/aarch64-linux-gnu/libpng16.so.16', '.'),
-        ('/usr/lib/aarch64-linux-gnu/libjpeg.so.8', '.'),
-        ('/usr/lib/aarch64-linux-gnu/libssl.so.1.1', '.'),
-        ('/usr/lib/aarch64-linux-gnu/libcrypto.so.1.1', '.'),
     ],
     datas=[
         ('database', 'database'),
@@ -222,14 +179,12 @@ a = Analysis(
         ('utils', 'utils'),
         ('youth_records.db', '.'),
         ('示例数据', '示例数据'),
-        # 包含Qt5插件 - 银河麒麟V10兼容
+        # Qt5插件
         ('/usr/lib/aarch64-linux-gnu/qt5/plugins/platforms', 'qt5/plugins/platforms'),
         ('/usr/lib/aarch64-linux-gnu/qt5/plugins/imageformats', 'qt5/plugins/imageformats'),
-        ('/usr/lib/aarch64-linux-gnu/qt5/plugins/iconengines', 'qt5/plugins/iconengines'),
-        # 包含字体文件 - 中文支持
+        # 字体文件
         ('/usr/share/fonts/truetype/dejavu', 'fonts/dejavu'),
         ('/usr/share/fonts/truetype/liberation', 'fonts/liberation'),
-        ('/usr/share/fonts/truetype/wqy', 'fonts/wqy'),
     ],
     hiddenimports=[
         'PyQt5.QtCore',
@@ -237,25 +192,11 @@ a = Analysis(
         'PyQt5.QtWidgets',
         'PyQt5.QtChart',
         'PyQt5.sip',
-        'PyQt5.QtPrintSupport',
-        'PyQt5.QtSvg',
         'openpyxl',
-        'openpyxl.workbook',
-        'openpyxl.worksheet',
         'pandas',
-        'pandas.core',
         'reportlab',
-        'reportlab.pdfgen',
         'PIL',
-        'PIL.Image',
         'sqlite3',
-        'hashlib',
-        'datetime',
-        'os',
-        'sys',
-        're',
-        'json',
-        'csv',
     ],
     hookspath=[],
     hooksconfig={},
