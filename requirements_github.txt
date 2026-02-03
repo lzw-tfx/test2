@@ -1,0 +1,63 @@
+# 一人一策记录本 - GitHub Actions 完整依赖包
+# 适用于ARM64架构的麒麟系统编译
+
+# PyQt5 GUI框架 - 核心依赖
+PyQt5==5.15.10
+PyQt5-sip==12.13.0
+PyQtChart==5.15.6
+
+# Excel文件处理 - openpyxl用于导入导出Excel
+openpyxl==3.1.2
+
+# 图像处理 - Pillow用于处理图片显示和保存
+Pillow==10.2.0
+
+# PDF生成 - reportlab用于生成PDF报告
+reportlab==4.0.9
+
+# 日期时间处理
+python-dateutil==2.8.2
+
+# 数据分析和处理 - pandas用于数据统计和分析
+pandas==2.1.4
+
+# 数据库相关 - SQLite3是Python内置的，但确保兼容性
+# sqlite3 # 内置模块，不需要安装
+
+# 系统工具
+psutil==5.9.8
+
+# 打包工具 - PyInstaller用于生成可执行文件
+pyinstaller==6.3.0
+
+# 加密和哈希 - hashlib是内置的，但可能需要额外的加密库
+cryptography==41.0.8
+
+# 正则表达式 - re是内置的，不需要额外安装
+# re # 内置模块
+
+# 文件和路径处理 - os, sys, io都是内置的
+# os, sys, io # 内置模块
+
+# 时间处理 - datetime的额外支持
+pytz==2023.3
+
+# 数据验证工具的额外支持
+validators==0.22.0
+
+# 确保GUI在Linux环境下正常工作的额外依赖
+# 这些在GitHub Actions的Ubuntu环境中可能需要
+setuptools==69.0.3
+wheel==0.42.0
+
+# 字体支持（用于PDF生成中的中文字体）
+fonttools==4.47.2
+
+# 网络请求支持（如果有网络功能）
+requests==2.31.0
+
+# JSON处理增强（虽然json是内置的）
+ujson==5.9.0
+
+# 内存优化
+memory-profiler==0.61.0
