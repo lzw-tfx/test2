@@ -19,7 +19,7 @@ reportlab==4.0.9
 python-dateutil==2.8.2
 
 # 数据分析和处理 - pandas用于数据统计和分析
-pandas==2.1.4
+pandas==2.0.3
 
 # 数据库相关 - SQLite3是Python内置的，但确保兼容性
 # sqlite3 # 内置模块，不需要安装
@@ -60,4 +60,5 @@ requests==2.31.0
 ujson==5.9.0
 
 # 内存优化
+
 memory-profiler==0.61.0
