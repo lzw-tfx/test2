@@ -15,59 +15,53 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Set up Python 3.8
-      uses: actions/setup-python@v4
+    - name: Set up QEMU for cross-compilation
+      uses: docker/setup-qemu-action@v3
       with:
-        python-version: '3.8'
+        platforms: arm64
         
-    - name: Install system dependencies
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Build ARM64 executable in Docker
       run: |
-        sudo apt-get update
-        sudo apt-get install -y \
-          python3-pyqt5 \
-          python3-pyqt5.qtchart \
-          qttools5-dev-tools \
-          libqt5gui5 \
-          libqt5widgets5 \
-          libqt5core5a \
-          libx11-6 \
-          libxext6 \
-          libxrender1 \
-          libxtst6 \
-          libxi6 \
-          libxrandr2 \
-          fonts-liberation \
-          fonts-dejavu-core \
-          fontconfig \
-          build-essential \
-          python3-dev
-          
-    - name: Install Python dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements_github.txt
+        cat > Dockerfile.arm64 << 'EOF'
+        FROM --platform=linux/arm64 python:3.8-slim
         
-    - name: Build executable with PyInstaller
-      run: |
-        pyinstaller --onefile \
-          --windowed \
-          --name youth_records_kylin_arm64 \
-          --add-data "database:database" \
-          --add-data "services:services" \
-          --add-data "ui:ui" \
-          --add-data "utils:utils" \
-          --add-data "youth_records.db:." \
-          --add-data "示例数据:示例数据" \
-          --hidden-import PyQt5.QtCore \
-          --hidden-import PyQt5.QtGui \
-          --hidden-import PyQt5.QtWidgets \
-          --hidden-import PyQt5.QtChart \
-          --hidden-import openpyxl \
-          --hidden-import pandas \
-          --hidden-import reportlab \
-          --hidden-import PIL \
-          --hidden-import sqlite3 \
-          main.py
+        WORKDIR /app
+        
+        # Install system dependencies
+        RUN apt-get update && apt-get install -y \
+            python3-pyqt5 \
+            python3-pyqt5.qtchart \
+            libqt5gui5 \
+            libqt5widgets5 \
+            libqt5core5a \
+            build-essential \
+            python3-dev
+            
+        # Copy project files
+        COPY . .
+        
+        # Install Python dependencies
+        RUN pip install pyinstaller openpyxl reportlab python-dateutil pandas==2.0.3 Pillow
+        
+        # Build executable
+        RUN pyinstaller --onefile \
+            --name youth_records_kylin_arm64 \
+            --add-data "database:database" \
+            --add-data "services:services" \
+            --add-data "ui:ui" \
+            --add-data "utils:utils" \
+            --add-data "youth_records.db:." \
+            main.py
+        EOF
+        
+        # Build ARM64 Docker image and extract executable
+        docker buildx build --platform linux/arm64 -t youth-arm64 -f Dockerfile.arm64 .
+        docker create --name temp-container --platform linux/arm64 youth-arm64
+        docker cp temp-container:/app/dist/youth_records_kylin_arm64 ./youth_records_kylin_arm64
+        docker rm temp-container
           
     - name: Create deployment package
       run: |
