@@ -26,7 +26,6 @@ jobs:
         sudo apt-get install -y \
           python3-pyqt5 \
           python3-pyqt5.qtchart \
-          python3-pyqt5-dev \
           qttools5-dev-tools \
           libqt5gui5 \
           libqt5widgets5 \
@@ -39,7 +38,9 @@ jobs:
           libxrandr2 \
           fonts-liberation \
           fonts-dejavu-core \
-          fontconfig
+          fontconfig \
+          build-essential \
+          python3-dev
           
     - name: Install Python dependencies
       run: |
