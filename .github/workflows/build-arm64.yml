@@ -26,7 +26,7 @@ jobs:
     - name: Build ARM64 executable in Docker
       run: |
         cat > Dockerfile.arm64 << 'EOF'
-        FROM --platform=linux/arm64 python:3.8-slim
+        FROM python:3.8-slim
         
         WORKDIR /app
         
@@ -58,8 +58,8 @@ jobs:
         EOF
         
         # Build ARM64 Docker image and extract executable
-        docker buildx build --platform linux/arm64 -t youth-arm64 -f Dockerfile.arm64 .
-        docker create --name temp-container --platform linux/arm64 youth-arm64
+        docker buildx build --platform linux/arm64 --load -t youth-arm64 -f Dockerfile.arm64 .
+        docker run --platform linux/arm64 --name temp-container youth-arm64 ls /app/dist
         docker cp temp-container:/app/dist/youth_records_kylin_arm64 ./youth_records_kylin_arm64
         docker rm temp-container
           
